@@ -3,6 +3,7 @@
 library(epichains)
 library(ggplot2)
 library(cowplot)
+library(patchwork)
 
 # Simulating an outbreak size distribution
 
@@ -157,7 +158,6 @@ nbinom_size <- ggplot2::ggplot(data = outbreak_size) +
     strip.background = element_blank()
   )
 
-
 # summary statistics from outbreak size
 
 # proportion of outbreaks that cause >= 50 secondary cases when k = 0.5
@@ -175,12 +175,109 @@ size <- cowplot::plot_grid(
   labels = c("A", "B")
 )
 
+# H5 outbreak sizes
+# 67 single spillover, 3x cluster of 2 (cali x2, Miss and sources)
+scenario_1 <- c(rep(1, 67), c(2, 3)) 
+
+# 67 single spillover , 1x cluster of 3 (Miss, source and household contact), 
+# 2x cluster of 2 (Cali cases and source)
+scenario_2 <- c(rep(1, 67), c(2, 2), 3) 
+
+# H7
+H7_clusters <- c(rep(1, 84), 3, 2)
+
+breaks <- c(0, 1, 2, 5, 10, 20, 50, Inf)
+
+# remove index case to compare with simulations
+H5_scenario_1 <- scenario_1 - 1
+H5_scenario_2 <- scenario_2 - 1
+H7_clusters <- H7_clusters - 1
+
+H5_scenario_1_intervals <- cut(
+  H5_scenario_1, breaks = breaks, right = FALSE, include.lowest = TRUE
+)
+H5_scenario_2_intervals <- cut(
+  H5_scenario_2, breaks = breaks, right = FALSE, include.lowest = TRUE
+)
+H7_intervals <- cut(
+  H7_clusters, breaks = breaks, right = FALSE, include.lowest = TRUE
+)
+
+H5_scenario_1_outbreak_size <- data.frame(
+  chain_size = H5_scenario_1, 
+  intervals = H5_scenario_1_intervals, 
+  subtype = "H5_scenario_1"
+)
+H5_scenario_2_outbreak_size <- data.frame(
+  chain_size = H5_scenario_2, 
+  intervals = H5_scenario_2_intervals, 
+  subtype = "H5_scenario_2"
+)
+H7_outbreak_size <- data.frame(
+  chain_size = H7_clusters, 
+  intervals = H7_intervals, 
+  subtype = "H7"
+)
+
+outbreak_size <- rbind(
+  H5_scenario_1_outbreak_size, 
+  H5_scenario_2_outbreak_size, 
+  H7_outbreak_size
+)
+
+# get 5 colours from Spectral palette to match simulated outbreak distribution
+spectral_5 <- RColorBrewer::brewer.pal(n = 7, name = "Spectral")
+
+subtype_labels <- c(
+  H5_scenario_1 = "H5N1 Scenario 1",
+  H5_scenario_2 = "H5N1 Scenario 2",
+  H7 = "H7N7"
+)
+
+empirical_outbreak_size <- ggplot2::ggplot(data = outbreak_size) +
+  ggplot2::geom_histogram(
+    mapping = ggplot2::aes(x = chain_size, fill = intervals),
+    bins = 3
+  ) +
+  ggplot2::facet_wrap(
+    ggplot2::vars(subtype), 
+    labeller = ggplot2::as_labeller(subtype_labels)
+  ) +
+  ggplot2::scale_x_continuous(name = "Cluster size (secondary cases)") +
+  ggplot2::scale_y_continuous(name = "Number of clusters") +
+  ggplot2::scale_fill_manual(
+    name = "Outbreak size\n(secondary cases)", 
+    values = spectral_5[1:3]
+  ) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(strip.background = ggplot2::element_blank())
+
+# edit plots for composing layout
+pois_size <- pois_size + ggplot2::theme(legend.position = "none")
+
+nbinom_size <- nbinom_size + ggplot2::theme(legend.position = "bottom") +
+  ggplot2::guides(fill = ggplot2::guide_legend(nrow = 1))
+
+empirical_outbreak_size <- empirical_outbreak_size +
+  ggplot2::theme(legend.position = "none")
+
+design <- "
+12
+33
+44
+"
+outbreak_size <- pois_size + nbinom_size + 
+  patchwork::guide_area() + 
+  empirical_outbreak_size +
+  plot_layout(design = design, guides = "collect", heights = c(1, 0.15, 1)) +
+  plot_annotation(tag_levels = "A")
+
 ggplot2::ggsave(
   filename = file.path("plots", "outbreak_size.png"), 
-  plot = size,
+  plot = outbreak_size,
   device = "png", 
   width = 250, 
-  height = 150,
+  height = 250,
   units = "mm",
   dpi = 300
 )
@@ -294,7 +391,7 @@ for (i in seq_len(nrow(scenarios))) {
 outbreak_length <- do.call(rbind, outbreak_length_list)
 head(outbreak_length)
 
-nbinom_length <- ggplot2::ggplot(data = outbreak_size) +
+nbinom_length <- ggplot2::ggplot(data = outbreak_length) + # this was using outbreak_size CHECK
   ggplot2::geom_col(
     mapping = ggplot2::aes(x = as.factor(R), y = Freq, fill = interval)
   ) +
