@@ -39,6 +39,7 @@ fs::dir_tree()
 #> │   ├── H7N7_R.png
 #> │   ├── R0_US.png
 #> │   ├── R0_review.png
+#> │   ├── empirical_outbreak_size.png
 #> │   ├── inc_review.png
 #> │   ├── lat_inf_review.png
 #> │   ├── outbreak_length.png
@@ -107,3 +108,19 @@ briefly describe these branches:
   formulated, but was not included in the final version of the
   manuscript. The code remains on this branch, to potentially be used
   for a future analysis.
+
+## Known issues
+
+When running:
+
+``` r
+pcd_model <- pcd_cmdstan_model()
+# Error: CmdStan path has not been set yet. See ?set_cmdstan_path.
+```
+
+The fix is:
+
+``` r
+# Fix
+cmdstanr::install_cmdstan()
+```
