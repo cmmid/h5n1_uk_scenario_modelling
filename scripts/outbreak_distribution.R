@@ -391,7 +391,7 @@ for (i in seq_len(nrow(scenarios))) {
 outbreak_length <- do.call(rbind, outbreak_length_list)
 head(outbreak_length)
 
-nbinom_length <- ggplot2::ggplot(data = outbreak_length) + # this was using outbreak_size CHECK
+nbinom_length <- ggplot2::ggplot(data = outbreak_length) +
   ggplot2::geom_col(
     mapping = ggplot2::aes(x = as.factor(R), y = Freq, fill = interval)
   ) +
